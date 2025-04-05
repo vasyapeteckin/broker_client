@@ -8,6 +8,7 @@ from aiormq import AMQPConnectionError
 from pydantic import BaseModel
 
 from .abc import AbstractProducer, AbstractConsumer
+from .config import BaseBrokerSettings
 from .types import MessageHandler
 
 import aio_pika
@@ -26,6 +27,12 @@ class AioPikaProducer(AbstractProducer):
         channel = await self._get_channel()
         body = message.model_dump_json().encode("utf-8")
         return await channel.default_exchange.publish(message=Message(body=body), routing_key=routing_key)
+
+    @classmethod
+    async def lazy(cls, settings: BaseBrokerSettings = None):
+        settings: BaseBrokerSettings = settings or BaseBrokerSettings()
+        connection = await aio_pika.connect_robust(settings.url_str)
+        return cls(connection)
 
 
 class AioPikaConsumer(AbstractConsumer):
@@ -59,3 +66,9 @@ class AioPikaConsumer(AbstractConsumer):
                 await callback(payload)
             except Exception as e:
                 await msg.nack(requeue=False)
+
+    @classmethod
+    async def lazy(cls, settings: BaseBrokerSettings = None):
+        settings: BaseBrokerSettings = settings or BaseBrokerSettings()
+        connection = await aio_pika.connect_robust(settings.url_str)
+        return cls(connection)
