@@ -13,6 +13,7 @@ from ..types import MessageHandler
 
 import aio_pika
 
+
 class AioPikaProducer(AbstractProducer):
     def __init__(self, connection: aio_pika.abc.AbstractConnection, channel: aio_pika.abc.AbstractChannel = None):
         self.connection = connection
@@ -45,13 +46,16 @@ class AioPikaConsumer(AbstractConsumer):
             self.channel = await self.connection.channel()
         return self.channel
 
-
-    async def start_consuming(self, queue: str, callback: MessageHandler, auto_delete: bool = False) -> None:
+    async def start_consuming(self, queue: str,
+                              callback: MessageHandler,
+                              auto_delete: bool = False,
+                              requeue: bool = True,
+                              reject_on_redelivered: bool = True) -> None:
         channel = await self._get_channel()
         q = await channel.declare_queue(queue, durable=True, auto_delete=auto_delete)
         while True:
             try:
-                await q.consume(lambda msg: self._process_message(msg, callback))
+                await q.consume(lambda msg: self._process_message(msg, callback, requeue, reject_on_redelivered))
                 try:
                     await asyncio.Future()
                 finally:
@@ -59,13 +63,17 @@ class AioPikaConsumer(AbstractConsumer):
             except (IncompleteReadError, AMQPConnectionError) as e:
                 await asyncio.sleep(10)
 
-    async def _process_message(self, msg: aio_pika.IncomingMessage, callback: MessageHandler) -> None:
-        async with msg.process():
+    async def _process_message(self,
+                               msg: aio_pika.IncomingMessage,
+                               callback: MessageHandler,
+                               requeue: bool,
+                               reject_on_redelivered: bool) -> None:
+        async with msg.process(requeue=requeue, reject_on_redelivered=reject_on_redelivered):
             try:
                 payload = json.loads(msg.body.decode())
                 await callback(payload)
             except Exception as e:
-                await msg.nack(requeue=False)
+                logging.error(f"Error processing message: {e}")
 
     @classmethod
     async def lazy(cls, settings: BaseBrokerSettings = None):
