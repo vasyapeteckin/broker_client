@@ -39,17 +39,18 @@ class AioPikaConsumer(AbstractConsumer):
         return self.channel
 
 
-    async def start_consuming(self, queue: str, callback: MessageHandler) -> None:
+    async def start_consuming(self, queue: str, callback: MessageHandler, auto_delete: bool = False) -> None:
         channel = await self._get_channel()
-        q = await channel.declare_queue(queue, durable=True, auto_delete=True)
-        try:
-            await q.consume(lambda msg: self._process_message(msg, callback))
+        q = await channel.declare_queue(queue, durable=True, auto_delete=auto_delete)
+        while True:
             try:
-                await asyncio.Future()
-            finally:
-                await self.connection.close()
-        except (IncompleteReadError, AMQPConnectionError) as e:
-            await asyncio.sleep(10)
+                await q.consume(lambda msg: self._process_message(msg, callback))
+                try:
+                    await asyncio.Future()
+                finally:
+                    await self.connection.close()
+            except (IncompleteReadError, AMQPConnectionError) as e:
+                await asyncio.sleep(10)
 
     async def _process_message(self, msg: aio_pika.IncomingMessage, callback: MessageHandler) -> None:
         async with msg.process():
