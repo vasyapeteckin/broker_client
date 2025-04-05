@@ -1,0 +1,13 @@
+[project]
+name = "broker-client"
+version = "0.1.0"
+description = "Asynchronous message broker client using aio-pika and Pydantic for data validation."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic-settings>=2.8.1",
+]
+
+[dependency-groups]
+aio-pika = [
+    "aio-pika>=9.5.5",
+]
