@@ -3,7 +3,7 @@ import asyncio
 import aio_pika
 from pydantic import BaseModel
 
-from broker_client.aio_pika_impl import AioPikaProducer, AioPikaConsumer
+from broker_client import AioPikaProducer, AioPikaConsumer
 
 
 class Task(BaseModel):

@@ -7,9 +7,9 @@ from aio_pika import Message
 from aiormq import AMQPConnectionError
 from pydantic import BaseModel
 
-from .abc import AbstractProducer, AbstractConsumer
-from .config import BaseBrokerSettings
-from .types import MessageHandler
+from ..abc import AbstractProducer, AbstractConsumer
+from ..config import BaseBrokerSettings
+from ..types import MessageHandler
 
 import aio_pika
 
